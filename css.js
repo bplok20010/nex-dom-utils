@@ -1,36 +1,87 @@
-export function hasClass(element, className) {
-	if ( element.classList)
-		return !!className && element.classList.contains(className)
-	else
-		return ` ${element.className.baseVal || element.className} `.indexOf(` ${className} `) !== -1
+import contains from './contains';
+import camelCase from './util/camelCase';
+import typeOf from './util/typeOf';
+
+const div = document.createElement( "div" );
+// Finish early in limited (non-browser) environments
+let clearCloneStyle = true;
+if ( !div.style ) {
+	div.style.backgroundClip = "content-box";
+	div.cloneNode( true ).style.backgroundClip = "";
+	clearCloneStyle = div.style.backgroundClip === "content-box";
 }
 
-export function addClass(element, className){
-	if ( element.classList)
-		element.classList.add(className)
-	else if ( !hasClass(element, className))
-		if (typeof element.className === 'string')
-			element.className = element.className + ' ' + className
-		else
-			element.setAttribute('class', (element.className && element.className.baseVal || '') + ' ' + className)
-}
+const cssNumber = {
+	"animationIterationCount": true,
+	"columnCount": true,
+	"fillOpacity": true,
+	"flexGrow": true,
+	"flexShrink": true,
+	"fontWeight": true,
+	"lineHeight": true,
+	"opacity": true,
+	"order": true,
+	"orphans": true,
+	"widows": true,
+	"zIndex": true,
+	"zoom": true
+};
 
-function replaceClassName(origClass, classToRemove) {
-	return origClass.replace(new RegExp('(^|\\s)' + classToRemove + '(?:\\s|$)', 'g'), '$1').replace(/\s+/g, ' ').replace(/^\s*|\s*$/g, '');
-}
+export default function css(elem, name, value){
+	let type,
+		origName = camelCase( name );
+		
+	if ( Array.isArray( name ) ) {
+		let i = 0, map = {}, len = name.length;
 
-export function removeClass(element, className){
-	if ( element.classList)
-		element.classList.remove(className)
-	else if (typeof element.className === 'string')
-		element.className = replaceClassName(element.className, className)
-	else
-		element.setAttribute('class', replaceClassName(element.className && element.className.baseVal || '', className))
-}
+		for ( ; i < len; i++ ) {
+			map[ name[ i ] ] = css( elem, name[ i ] );
+		}
 
-export function toggleClass(element, className){
-	if( hasClass(element, className) )
-		removeClass(element, className)
-	else
-		addClass(element, className)	
+		return map;
+	}
+	
+	if( typeOf(name) === 'object' ) {
+		
+		for( let i in name ) {
+			css(elem, i, name[i]);	
+		}
+		
+		return;	
+	}
+		
+	if (arguments.length < 3) {
+		let ret = getComputedStyle(elem, null).getPropertyValue( name );
+
+		if ( ret === "" && !contains( elem.ownerDocument, elem ) ) {
+			ret = elem.style[name];
+		}
+		
+        return ret !== undefined ?
+	
+			// Support: IE <=9 - 11 only
+			// IE returns zIndex value as an integer.
+			ret + "" :
+			ret;
+    }
+	
+	if ( value !== undefined ) {
+		type = typeof value;
+		// Make sure that null and NaN values aren't set (#7116)
+		if ( value == null || value !== value ) {
+			return;
+		}	
+		
+		// If a number was passed in, add the unit (except for certain CSS properties)
+		if ( type === "number" ) {
+			value += ( cssNumber[ origName ] ? "" : "px" );
+		}
+		
+		// background-* props affect original clone's values
+		if ( !support.clearCloneStyle && value === "" && name.indexOf( "background" ) === 0 ) {
+			elem.style[ name ] = "inherit";
+		}
+		
+		elem.style[ name ] = value;
+	}
 }
