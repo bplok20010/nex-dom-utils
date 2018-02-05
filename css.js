@@ -28,9 +28,6 @@ const cssNumber = {
 };
 
 export default function css(elem, name, value){
-	let type,
-		origName = camelCase( name );
-		
 	if ( Array.isArray( name ) ) {
 		let i = 0, map = {}, len = name.length;
 
@@ -40,6 +37,9 @@ export default function css(elem, name, value){
 
 		return map;
 	}
+	
+	let type,
+		origName = camelCase( name );
 	
 	if( typeOf(name) === 'object' ) {
 		

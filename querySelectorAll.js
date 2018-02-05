@@ -1,7 +1,8 @@
 // Zepto.js
 // (c) 2010-2015 Thomas Fuchs
 // Zepto.js may be freely distributed under the MIT license.
-let simpleSelectorRE = /^[\w-]*$/
+let simpleSelectorRE = /^[\w-]*$/;
+//[].slice.call(arraylike) -> ↓
 let toArray = Function.prototype.bind.call(Function.prototype.call, [].slice);//toArray = [].slice.call.bind([].slice)
 
 export default function qsa(element, selector) {

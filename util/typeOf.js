@@ -1,7 +1,7 @@
 const class2type = {};
 const toString = class2type.toString;
 
-"Boolean Number String Function Array Date RegExp Object Error Symbol".split( " " ).forEach(name => class2type[ "[object " + name + "]" ] = name.toLowerCase());
+"Boolean Number String Function Array Date RegExp Object Error Symbol Set Map NodeList".split( " " ).forEach(name => class2type[ "[object " + name + "]" ] = name.toLowerCase());
 	
 export default function typeOf( obj ) {
 	if ( obj == null ) {
