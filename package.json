@@ -25,7 +25,7 @@
     "*.md",
     "lib",
     "dist",
-    "es",
+    "es"
   ],
   "homepage": "https://github.com/bplok20010/nex-dom-utils#readme",
   "dependencies": {
