@@ -1,0 +1,112 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>NDU</title>
+<script type="text/javascript" src="../dist/nex-dom-utils.js"></script>
+<style type="text/css">
+	html, body {
+		margin:0;
+		padding:0;
+		overflow:auto;/*BFC*/		
+	}
+	.wrapper {
+		width: 980px;
+		margin:10px auto;
+		padding:5px;
+		
+	}
+	.wrapper > section {
+		position:relative;
+		min-height:100px;
+		border:1px solid #ccc;
+		background:#f5f5f5;
+		padding-top: 30px;
+	}
+	
+	.wrapper > section > header {
+		position:absolute;
+		left:0;
+		top:0;
+		padding:5px 20px;
+		background:#d4d4f7;
+		color:#5b5be0;
+	}
+	
+	.demo-css {
+		border:1px solid groove;
+		background:#333;
+		padding:20px;
+		margin:5px;	
+	}
+	
+	.offset-css {
+		border:1px solid groove;
+		position:relative;
+		background:#333;
+		width:100px;
+		height:100px;
+		overflow:auto;
+	}
+	
+	.events-css {
+		border:1px solid groove;
+		border:1px solid green;
+		position:relative;
+		overflow:auto;
+	}
+</style>
+</head>
+
+<body>
+	<div class="wrapper">
+    	<section>
+        	<header>css</header>
+            <div id="_css_" class="demo-css">
+            	demo-css	
+            </div>
+        </section>
+        
+        <section>
+        	<header>offset</header>
+            <div id="_offset_" class="offset-css a">
+            	<div style="width:300px; height:300px;"></div>
+                <div style="position:absolute; left:150px; top:50px; width:50px; height:50px; background:red" id="offset">A</div>
+            </div>
+        </section>
+        
+        <section>
+        	<header>events</header>
+            <div id="_events_" class="events-css a">
+            	click
+            </div>
+        </section>
+    </div>
+    
+	<script type="text/javascript">
+		function demo(){
+			var ret = NDU.css( _css_, ['borderWidth', 'margin', 'backgroundColor', 'height'] );
+			console.log(ret);
+			NDU.css( _css_, {
+				backgroundColor: 'red',
+				color: '#FFF',
+				height: 80
+			} );
+			
+			var handler = function(){
+				console.log('dblclick')	
+				NDU.events.off(_events_, 'dblclick', handler);
+			};
+			var off = NDU.events.on(_events_, 'dblclick', handler)
+			
+			NDU.events.on(document, 'click', NDU.events.filter('.a', function(){
+				console.log('click', this)	
+			}))
+			
+		}
+		
+		demo();
+	</script>
+    
+</body>
+</html>

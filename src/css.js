@@ -38,9 +38,6 @@ export default function css(elem, name, value){
 		return map;
 	}
 	
-	let type,
-		origName = camelCase( name );
-	
 	if( typeOf(name) === 'object' ) {
 		
 		for( let i in name ) {
@@ -49,9 +46,14 @@ export default function css(elem, name, value){
 		
 		return;	
 	}
+	
+	let type;
+	
+	name = camelCase( name );
 		
 	if (arguments.length < 3) {
-		let ret = getComputedStyle(elem, null).getPropertyValue( name );
+		const computed = getComputedStyle(elem, null);
+		let ret = computed.getPropertyValue( name ) || computed[name];
 
 		if ( ret === "" && !contains( elem.ownerDocument, elem ) ) {
 			ret = elem.style[name];
@@ -74,11 +76,11 @@ export default function css(elem, name, value){
 		
 		// If a number was passed in, add the unit (except for certain CSS properties)
 		if ( type === "number" ) {
-			value += ( cssNumber[ origName ] ? "" : "px" );
+			value += ( cssNumber[ name ] ? "" : "px" );
 		}
 		
 		// background-* props affect original clone's values
-		if ( !support.clearCloneStyle && value === "" && name.indexOf( "background" ) === 0 ) {
+		if ( !clearCloneStyle && value === "" && name.indexOf( "background" ) === 0 ) {
 			elem.style[ name ] = "inherit";
 		}
 		

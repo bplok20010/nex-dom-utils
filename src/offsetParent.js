@@ -1,7 +1,7 @@
 import css from './css';
 
 export default function offsetParent(elem) {
-  let doc = elem.ownerDocument;
+  let doc = elem.ownerDocument
     , offsetParent = elem && elem.offsetParent;
 
 	while (offsetParent && css(offsetParent, 'position') === 'static' ) {

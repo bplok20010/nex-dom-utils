@@ -3,20 +3,20 @@ import offset from './getOffset';
 import position from '../position';
 
 export default function setOffset(elem, options){
-	var curPosition, curLeft, curCSSTop, curTop, curOffset, curCSSLeft, calculatePosition,
-		position = css( elem, "position" ),
+	let curPosition, curLeft, curCSSTop, curTop, curOffset, curCSSLeft, calculatePosition,
+		positionState = css( elem, "position" ),
 		curElem = elem,
 		props = {};
 
 	// Set position first, in-case top/left are set even on static elem
-	if ( position === "static" ) {
+	if ( positionState === "static" ) {
 		elem.style.position = "relative";
 	}
 
 	curOffset = offset(curElem);
 	curCSSTop = css( elem, "top" );
 	curCSSLeft = css( elem, "left" );
-	calculatePosition = ( position === "absolute" || position === "fixed" ) &&
+	calculatePosition = ( positionState === "absolute" || positionState === "fixed" ) &&
 		( curCSSTop + curCSSLeft ).indexOf( "auto" ) > -1;
 
 	// Need to be able to calculate position if either
