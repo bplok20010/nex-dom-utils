@@ -1,0 +1,45 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>NDU</title>
+<script type="text/javascript" src="../dist/nex-dom-utils.js"></script>
+</head>
+
+<body>
+	<div class="wrapper">
+    	<section>
+        	<header>css</header>
+            <div id="_css_" class="demo-css">
+            	demo-css	
+            </div>
+        </section>
+        
+        <section>
+        	<header>offset</header>
+            <div id="_offset_" class="offset-css a">
+            	<div class="sub">sub-<div class="ac">ac</div></div>
+                <div class="ac">ac</div>
+            </div>
+        </section>
+        
+        <section>
+        	<header>events</header>
+            <div id="_events_" class="events-css a">
+            	click<div class="sub">sub</div>
+            </div>
+        </section>
+    </div>
+    
+	<script type="text/javascript">
+		var $ = NDU.selector;
+	
+		$(function(){
+			console.log('ready...');
+			console.log( $('<div><h1>dadf</h1></div><div class="my"><h1>dadf</h1></div>') )
+			console.log( $('.offset-css').find(".offset-css > .sub > .ac") )
+		});
+	</script>
+    
+</body>
+</html>

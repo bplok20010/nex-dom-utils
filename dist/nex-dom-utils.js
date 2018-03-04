@@ -362,6 +362,356 @@ function offset(elem, options) {
 	}
 }
 
+var push = Array.prototype.push;
+var toString$1 = Object.prototype.toString;
+var hasOwn = Object.prototype.hasOwnProperty;
+var fnToString = hasOwn.toString;
+var ObjectFunctionString = fnToString.call(Object);
+
+
+
+var class2type$1 = {};
+
+each("Boolean Number String Function Array Date RegExp Object Error Symbol".split(" "), function (i, name) {
+	class2type$1["[object " + name + "]"] = name.toLowerCase();
+});
+
+function toType(obj) {
+	if (obj == null) {
+		return obj + "";
+	}
+
+	return (typeof obj === "undefined" ? "undefined" : _typeof(obj)) === "object" || typeof obj === "function" ? class2type$1[toString$1.call(obj)] || "object" : typeof obj === "undefined" ? "undefined" : _typeof(obj);
+}
+
+function isArrayLike(obj) {
+
+	var length = !!obj && "length" in obj && obj.length,
+	    type = toType(obj);
+
+	if (isFunction(obj) || isWindow(obj)) {
+		return false;
+	}
+
+	return type === "array" || length === 0 || typeof length === "number" && length > 0 && length - 1 in obj;
+}
+
+
+
+function isWindow(obj) {
+	return obj != null && obj === obj.window;
+}
+
+
+
+function isFunction(obj) {
+	return typeof obj === "function" && typeof obj.nodeType !== "number";
+}
+
+function makeArray(arr, results) {
+	var ret = results || [];
+
+	if (arr != null) {
+		if (isArrayLike(Object(arr))) {
+			merge(ret, typeof arr === "string" ? [arr] : arr);
+		} else {
+			push.call(ret, arr);
+		}
+	}
+
+	return ret;
+}
+
+function merge(first, second) {
+	var len = +second.length,
+	    j = 0,
+	    i = first.length;
+
+	for (; j < len; j++) {
+		first[i++] = second[j];
+	}
+
+	first.length = i;
+
+	return first;
+}
+
+function each(obj, callback) {
+	var length = void 0,
+	    i = 0;
+
+	if (isArrayLike(obj)) {
+		length = obj.length;
+		for (; i < length; i++) {
+			if (callback.call(obj[i], i, obj[i]) === false) {
+				break;
+			}
+		}
+	} else {
+		for (i in obj) {
+			if (callback.call(obj[i], i, obj[i]) === false) {
+				break;
+			}
+		}
+	}
+
+	return obj;
+}
+
+function domReady(fn) {
+	function trigger() {
+		window.document.removeEventListener('DOMContentLoaded', trigger);
+		window.removeEventListener('load', trigger);
+		fn();
+	}
+
+	// check if document is already loaded
+	if (window.document.readyState === 'complete') {
+		window.setTimeout(fn);
+	} else {
+		// We can not use jqLite since we are not done loading and jQuery could be loaded later.
+
+		// Works for modern browsers and IE9
+		window.document.addEventListener('DOMContentLoaded', trigger);
+
+		// Fallback to window.onload for others
+		window.addEventListener('load', trigger);
+	}
+}
+
+var SINGLE_TAG_REGEXP = /^<([\w-]+)\s*\/?>(?:<\/\1>|)$/;
+var HTML_REGEXP = /<|&#?\w+;/;
+var TAG_NAME_REGEXP = /<([\w:-]+)/;
+var XHTML_TAG_REGEXP = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:-]+)[^>]*)\/>/gi;
+
+var wrapMap = {
+	'option': [1, '<select multiple="multiple">', '</select>'],
+
+	'thead': [1, '<table>', '</table>'],
+	'col': [2, '<table><colgroup>', '</colgroup></table>'],
+	'tr': [2, '<table><tbody>', '</tbody></table>'],
+	'td': [3, '<table><tbody><tr>', '</tr></tbody></table>'],
+	'_default': [0, '', '']
+};
+
+wrapMap.optgroup = wrapMap.option;
+wrapMap.tbody = wrapMap.tfoot = wrapMap.colgroup = wrapMap.caption = wrapMap.thead;
+wrapMap.th = wrapMap.td;
+
+function jqLiteIsTextNode(html) {
+	return !HTML_REGEXP.test(html);
+}
+
+function jqLiteBuildFragment(html, context) {
+	var tmp = void 0,
+	    tag = void 0,
+	    wrap = void 0,
+	    fragment = context.createDocumentFragment(),
+	    nodes = [],
+	    i = void 0;
+
+	if (jqLiteIsTextNode(html)) {
+		// Convert non-html into a text node
+		nodes.push(context.createTextNode(html));
+	} else {
+		// Convert html into DOM nodes
+		tmp = fragment.appendChild(context.createElement('div'));
+		tag = (TAG_NAME_REGEXP.exec(html) || ['', ''])[1].toLowerCase();
+		wrap = wrapMap[tag] || wrapMap._default;
+		tmp.innerHTML = wrap[1] + html.replace(XHTML_TAG_REGEXP, '<$1></$2>') + wrap[2];
+
+		// Descend through wrappers to the right content
+		i = wrap[0];
+		while (i--) {
+			tmp = tmp.lastChild;
+		}
+
+		nodes = merge(nodes, tmp.childNodes);
+
+		tmp = fragment.firstChild;
+		tmp.textContent = '';
+	}
+
+	// Remove wrapper from fragment
+	fragment.textContent = '';
+	fragment.innerHTML = ''; // Clear inner HTML
+	each(nodes, function (i, node) {
+		fragment.appendChild(node);
+	});
+
+	return fragment;
+}
+
+function parseHTML(data, context /*, keepScripts*/) {
+	if (typeof data !== "string") {
+		return [];
+	}
+
+	context = context || window.document;
+	var parsed = void 0;
+
+	if (parsed = SINGLE_TAG_REGEXP.exec(data)) {
+		return [context.createElement(parsed[1])];
+	}
+
+	if (parsed = jqLiteBuildFragment(data, context)) {
+		return merge([], parsed.childNodes);
+	}
+
+	return [];
+}
+
+function find(selector, context, results, seed) {
+	var elem = void 0,
+	    nodeType = void 0,
+	    i = 0;
+
+	results = results || [];
+	context = context || document;
+
+	// Same basic safeguard as Sizzle
+	if (!selector || typeof selector !== "string") {
+		return results;
+	}
+
+	// Early return if context is not an element or document
+	if ((nodeType = context.nodeType) !== 1 && nodeType !== 9) {
+		return [];
+	}
+
+	if (seed) {
+		while (elem = seed[i++]) {
+			if (matches(elem, selector)) {
+				results.push(elem);
+			}
+		}
+	} else {
+		merge(results, context.querySelectorAll(selector));
+	}
+
+	return results;
+}
+
+var rootjQuery = void 0;
+var rquickExpr = /^(?:\s*(<[\w\W]+>)[^>]*|#([\w-]+))$/;
+
+function init(selector, context, root) {
+	if (!(this instanceof init)) {
+		return new init(selector, context, root);
+	}
+
+	if (selector instanceof init) {
+		return selector;
+	}
+
+	var match = void 0,
+	    elem = void 0;
+
+	// HANDLE: $(""), $(null), $(undefined), $(false)
+	if (!selector) {
+		//dont call this.constructor(...) !!!
+		return this;
+	}
+
+	// Method init() accepts an alternate rootjQuery
+	// so migrate can support jQuery.sub (gh-2101)
+	root = root || rootjQuery;
+
+	// Handle HTML strings
+	if (typeof selector === "string") {
+		if (selector[0] === "<" && selector[selector.length - 1] === ">" && selector.length >= 3) {
+
+			// Assume that strings that start and end with <> are HTML and skip the regex check
+			match = [null, selector, null];
+		} else {
+			match = rquickExpr.exec(selector);
+		}
+
+		// Match html or make sure no context is specified for #id
+		if (match && (match[1] || !context)) {
+
+			// HANDLE: $(html) -> $(array)
+			if (match[1]) {
+				context = context instanceof init ? context[0] : context;
+
+				// Option to run scripts is true for back-compat
+				// Intentionally let the error be thrown if parseHTML is not present
+				merge(this, parseHTML(match[1], context && context.nodeType ? context.ownerDocument || context : document, true));
+
+				return this;
+
+				// HANDLE: $(#id)
+			} else {
+				elem = document.getElementById(match[2]);
+
+				if (elem) {
+
+					// Inject the element directly into the jQuery object
+					this[0] = elem;
+					this.length = 1;
+				}
+				return this;
+			}
+
+			// HANDLE: $(expr, $(...))
+		} else if (!context) {
+			return root.find(selector);
+
+			// HANDLE: $(expr, context)
+			// (which is just equivalent to: $(context).find(expr)
+		} else {
+			return init(context).find(selector);
+		}
+
+		// HANDLE: $(DOMElement)
+	} else if (selector.nodeType) {
+		this[0] = selector;
+		this.length = 1;
+		return this;
+
+		// HANDLE: $(function)
+		// Shortcut for document ready
+	} else if (isFunction(selector)) {
+		domReady(selector);
+	}
+
+	return makeArray(selector, this);
+}
+
+init.prototype = {
+	constructor: init,
+	length: 0,
+	push: push,
+	sort: [].sort,
+	splice: [].splice,
+	find: function find$$1(selector) {
+		var i = void 0,
+		    ret = void 0,
+		    len = this.length,
+		    self = this;
+
+		ret = this.pushStack([]);
+
+		for (i = 0; i < len; i++) {
+			find(selector, self[i], ret);
+		}
+
+		return ret; //len > 1 ? jQuery.uniqueSort( ret ) : ret;	
+	},
+	pushStack: function pushStack(elems) {
+		// Build a new jQuery matched element set
+		var ret = merge(init(), elems);
+
+		// Add the old object onto the stack (as a reference)
+		//ret.prevObject = this;
+
+		// Return the newly-formed element set
+		return ret;
+	}
+};
+
+rootjQuery = new init(document);
+
 function hasClass(element, className) {
 	if (element.classList) return !!className && element.classList.contains(className);else return (' ' + (element.className.baseVal || element.className) + ' ').indexOf(' ' + className + ' ') !== -1;
 }
@@ -390,6 +740,7 @@ exports.css = css;
 exports.contains = contains;
 exports.closest = closest;
 exports.offset = offset;
+exports.selector = init;
 exports.hasClass = hasClass;
 exports.addClass = addClass;
 exports.removeClass = removeClass;
