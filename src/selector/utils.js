@@ -116,3 +116,17 @@ export function each( obj, callback ) {
 	return obj;
 }
 
+export const NODE_TYPE_ELEMENT = 1;
+export const NODE_TYPE_ATTRIBUTE = 2;
+export const NODE_TYPE_TEXT = 3;
+export const NODE_TYPE_COMMENT = 8;
+export const NODE_TYPE_DOCUMENT = 9;
+export const NODE_TYPE_DOCUMENT_FRAGMENT = 11;
+
+export function isUndefined(value) {return typeof value === 'undefined';}
+
+export function isDefined(value) {return typeof value !== 'undefined';}
+
+export function isString(value) {return typeof value === 'string';}
+
+export function lowercase(string) {return isString(string) ? string.toLowerCase() : string;}
