@@ -6,8 +6,7 @@ import css from './css';
 import events from './events';
 import offset from './offset';
 import position from './position';
-import selector from './selector';
 
 export * from './classes';
 
-export { events, position, offsetParent, matches, css, contains, closest, offset, selector };
+export { events, position, offsetParent, matches, css, contains, closest, offset };

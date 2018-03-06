@@ -1,5 +1,5 @@
 import matchesSelector from '../matches';
-import * as utils from './utils';
+import { merge, NODE_TYPE_ELEMENT, NODE_TYPE_DOCUMENT } from './utils';
 
 function find(selector, context, results, seed) {
 	let elem,
@@ -15,7 +15,7 @@ function find(selector, context, results, seed) {
 	}
 
 	// Early return if context is not an element or document
-	if ((nodeType = context.nodeType) !== 1 && nodeType !== 9) {
+	if ((nodeType = context.nodeType) !== NODE_TYPE_ELEMENT && nodeType !== NODE_TYPE_DOCUMENT) {
 		return [];
 	}
 
@@ -26,7 +26,7 @@ function find(selector, context, results, seed) {
 			}
 		}
 	} else {
-		utils.merge(results, context.querySelectorAll(selector));
+		merge(results, context.querySelectorAll(selector));
 	}
 
 	return results;

@@ -26,6 +26,7 @@
             "always"
         ],
 		"no-mixed-spaces-and-tabs": ["off", false],
-		"no-console": ["off", false]
+		"no-console": ["off", false],
+		"no-unused-vars": 1
     }
 }
