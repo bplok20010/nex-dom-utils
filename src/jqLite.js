@@ -5,11 +5,15 @@ import {
 	lowercase,
 	isDefined,
 	isFunction,
+	isString,
 	makeArray,
 	isWindow,
 	isUndefined,
 	isObject,
 	NODE_TYPE_DOCUMENT,
+	NODE_TYPE_ATTRIBUTE,
+	NODE_TYPE_TEXT,
+	NODE_TYPE_COMMENT,
 } from './selector/utils';
 
 import domReady from './selector/domReady';
@@ -17,9 +21,26 @@ import domReady from './selector/domReady';
 import parseHTML from './selector/parseHTML';
 import find from './selector/find';
 
+import offset from './offset';
+import position from './position';
+import offsetParent from './offsetParent';
+import matches from './matches';
+import {
+	hasClass,
+	addClass,
+	removeClass,
+	toggleClass	
+} from './classes';
+
+import closest from './closest';
+
 import css from './css';
 
 const rquickExpr = /^(?:\s*(<[\w\W]+>)[^>]*|#([\w-]+))$/;
+const BOOLEAN_ATTR = {};
+each('multiple,selected,checked,disabled,readOnly,required,open'.split(','), function(i, value) {
+	BOOLEAN_ATTR[lowercase(value)] = value;
+});
 
 //////////////////////////////////////////////
 export default function JQLite(selector, context){
@@ -192,11 +213,51 @@ function jqLiteWidthOrHeightCreator(type){
 	};
 }
 
+function jqLiteAttr(element, name, value){
+	let ret;
+	const nodeType = element.nodeType;
+	if (nodeType === NODE_TYPE_TEXT || nodeType === NODE_TYPE_ATTRIBUTE || nodeType === NODE_TYPE_COMMENT ||
+		!element.getAttribute) {
+		return;
+	}
+	
+	const lowercasedName = lowercase(name);
+	const isBooleanAttr = BOOLEAN_ATTR[lowercasedName];
+	
+	if (isDefined(value)) {
+		// setter
+	
+		if (value === null || (value === false && isBooleanAttr)) {
+			element.removeAttribute(name);
+		} else {
+			element.setAttribute(name, isBooleanAttr ? lowercasedName : value);
+		}
+	} else {
+		// getter
+	
+		ret = element.getAttribute(name);
+	
+		if (isBooleanAttr && ret !== null) {
+			ret = lowercasedName;
+		}
+		// Normalize non-existing attributes to undefined (as jQuery).
+		return ret === null ? undefined : ret;
+	}
+}
+
+function jqLiteProp(element, name, value) {
+	if (isDefined(value)) {
+		element[name] = value;
+	} else {
+		return element[name];
+	}
+}
+
 each({
 	width: function(value){
 		const length = this.length;
 		
-		if( !length ) return value === undefined ? 0 : this;
+		if( !length ) return value === undefined ? undefined : this;
 		
 		const func = jqLiteWidthOrHeightCreator('Width');
 		
@@ -214,7 +275,7 @@ each({
 	height: function(value){
 		const length = this.length;
 		
-		if( !length ) return value === undefined ? 0 : this;
+		if( !length ) return value === undefined ? undefined : this;
 		
 		const func = jqLiteWidthOrHeightCreator('Height');
 		
@@ -228,7 +289,171 @@ each({
 		}
 		
 		return this;
+	},
+	
+	outerWidth: function(){
+		const length = this.length;
+		
+		if( !length ) return;	
+		
+		const elem = this[0];
+		
+		if( isWindow(elem) ) {
+			return elem.innerWidth;	
+		}
+		
+		if( elem.nodeType === NODE_TYPE_DOCUMENT ) return this.width();
+		
+		return elem.offsetWidth;
+	},
+	
+	outerHeight: function(){
+		const length = this.length;
+		
+		if( !length ) return;	
+		
+		const elem = this[0];
+		
+		if( isWindow(elem) ) {
+			return elem.innerHeight;	
+		}
+		
+		if( elem.nodeType === NODE_TYPE_DOCUMENT ) return this.height();
+		
+		return elem.offsetHeight;	
+	},
+	
+	offset: function(coordinates){
+		if( coordinates ) {
+			return this.each(function(i, elem){
+				offset( elem, coordinates )	
+			});	
+		}
+		
+		if( !this.length ) return;
+		
+		return offset(this[0]);
+	},
+	
+	position: function(){
+		if( !this.length ) return;
+		
+		return position(this[0]);
+	},
+	
+	css: function(key, value){
+		if( value !== undefined ) {
+			return this.each(function(i, elem){
+				css( elem, key, value );	
+			})
+		} else if( isObject(key) ) {
+			for( var k in key ) {
+				this.css(k, key[k]);
+			}	
+			return this;
+		} else if( this.length ) {
+			return css(this[0], key);	
+		}
+	},
+	
+	attr: function(key, value){
+		if( value !== undefined ) {
+			return this.each(function(i, elem){
+				jqLiteAttr( elem, key, value );	
+			})
+		} else if( isObject(key) ) {
+			for( let k in key ) {
+				this.attr(k, key[k]);
+			}	
+			return this;
+		} else if( this.length ) {
+			return jqLiteAttr(this[0], key);	
+		}
+	},
+	
+	removeAttr: function(name){
+		return this.each( function(i, elem){
+			elem.removeAttribute(name);
+		} )	
+	},
+	
+	prop: function(key, value){
+		if( value !== undefined ) {
+			return this.each(function(i, elem){
+				jqLiteProp( elem, key, value );	
+			})
+		} else if( this.length ) {
+			return jqLiteProp( this[0], key, value );		
+		}	
+	},
+	
+	filter: function(selector){
+		let elems = new JQLite(), elem, i, len;
+		
+		if( isFunction(selector) ) {
+			for( i = 0, len = this.length; i < len ; i++ ) {
+				elem = this[i];
+				if( selector.call(elem, i, elem) ) {
+					elems.push(elem);
+				}
+			}
+		} else if( isString(selector) ) {
+			for( i = 0, len = this.length, elem; i < len ; i++ ) {
+				elem = this[i];
+				if( matches(elem, selector) ) {
+					elems.push(elem);
+				}
+			}
+		}
+		
+		return elems;	
+	},
+	
+	closest: function(selector){
+		const nodes = [];
+		
+		this.each(function(i, elem){
+			const node = closest(elem, selector);
+			if( node ) nodes.push(node);	
+		});
+		
+		return new JQLite(nodes);	
+	},
+	
+	offsetParent: function(){
+		if( this.length ) return offsetParent(this[0]);	
+	},
+	
+	hasClass: function(className){
+		for( let i = 0, n = this.length; i < n ; i++ ) {
+			if( hasClass(this[i], className) ) {
+				return true;
+			}
+		}
+		return false;	
+	},
+	
+	addClass: function(className){
+		if( !className ) return this;
+		return this.each( function(i, elem){
+			className.split(/\s+/).forEach( name => addClass( elem, name ) );	
+		} );
+	},
+	
+	removeClass: function(className){
+		if( !className ) return this;	
+		return this.each( function(i, elem){
+			className.split(/\s+/).forEach( name => removeClass( elem, name ) );	
+		} );
+	},
+	
+	toggleClass: function(className){
+		if( !className ) return this;
+		return this.each( function(i, elem){
+			className.split(/\s+/).forEach( name => toggleClass( elem, name ) );	
+		} );		
 	}
+	
 }, function(name, func){
 	/**
      * Properties: writes return selection, reads return first value
