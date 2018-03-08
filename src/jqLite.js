@@ -14,6 +14,9 @@ import {
 	NODE_TYPE_ATTRIBUTE,
 	NODE_TYPE_TEXT,
 	NODE_TYPE_COMMENT,
+	NODE_TYPE_DOCUMENT_FRAGMENT,
+	NODE_TYPE_ELEMENT,
+	extend,
 } from './selector/utils';
 
 import domReady from './selector/domReady';
@@ -143,6 +146,8 @@ const JQLitePrototype = JQLite.fn = JQLite.prototype = {
 	sort: [].sort,
 	splice: [].splice,
 	
+	extend,
+	
 	find: function(selector){
 		let i, ret,
 			len = this.length,
@@ -253,7 +258,55 @@ function jqLiteProp(element, name, value) {
 	}
 }
 
+////////////Methods////////////////
 each({
+	
+	append: function(node){
+		node = new JQLite(node);	
+		return this.each(function(i, elem){
+			const nodeType = elem.nodeType;
+			if (nodeType !== NODE_TYPE_ELEMENT && nodeType !== NODE_TYPE_DOCUMENT_FRAGMENT) return;	
+			
+			for (let i = 0, ii = node.length; i < ii; i++) {
+				const child = node[i];
+				elem.appendChild(child);
+			}
+		});
+	},
+	
+	prepend: function(node){
+		node = new JQLite(node);	
+		return this.each(function(i, elem){
+			if (elem.nodeType === NODE_TYPE_ELEMENT) {
+				const index = elem.firstChild;
+				each(node, function(i, child) {
+					elem.insertBefore(child, index);
+				});
+			}
+		});
+	},
+	
+	remove: function(){
+		return this.each(function(elem){
+			const parent = elem.parentNode;
+			if (parent) parent.removeChild(elem);	
+		});
+	},
+	
+	children: function(){
+		const children = [];
+		
+		this.each(function(i, elem){
+			each(elem.childNodes, function(ii, element) {
+				if (element.nodeType === NODE_TYPE_ELEMENT) {
+					children.push(element);
+				}
+			});	
+		});
+		
+		return children;
+	},
+	
 	width: function(value){
 		const length = this.length;
 		
@@ -461,3 +514,55 @@ each({
 	JQLitePrototype[name] = func;
 });
 
+each( { scrollLeft: "pageXOffset", scrollTop: "pageYOffset" }, function( method, prop ) {
+	const top = "pageYOffset" === prop;
+
+	JQLitePrototype[ method ] = function( val ) {
+		//getter
+		if ( val === undefined ) {
+			let win;
+			const elem = this[0];
+			
+			if( !elem ) return;
+			
+			if ( isWindow( elem ) ) {
+				win = elem;
+			} else if ( elem.nodeType === NODE_TYPE_DOCUMENT ) {
+				win = elem.defaultView;
+			}
+			
+			return win ? win[ prop ] : elem[ method ];
+		}
+		
+		//setter
+		return this.each(function(i, elem){
+			let win;	
+			if ( isWindow( elem ) ) {
+				win = elem;
+			} else if ( elem.nodeType === NODE_TYPE_DOCUMENT ) {
+				win = elem.defaultView;
+			}
+			
+			if ( win ) {
+				win.scrollTo(
+					!top ? val : win.pageXOffset,
+					top ? val : win.pageYOffset
+				);
+	
+			} else {
+				elem[ method ] = val;
+			}
+			
+		});
+	};
+} );
+
+////////////Functions////////////////
+each({
+	extend,
+	each,
+	isWindow,
+	css,
+}, function(name, func){
+	JQLite[name] = func;	
+});

@@ -16,7 +16,7 @@ var hasOwn = Object.prototype.hasOwnProperty;
 var fnToString = hasOwn.toString;
 var ObjectFunctionString = fnToString.call(Object);
 
-
+var getProto = Object.getPrototypeOf;
 
 var class2type = {};
 
@@ -50,7 +50,23 @@ function isWindow(obj) {
 	return obj != null && obj === obj.window;
 }
 
+function isPlainObject(obj) {
+	var proto = void 0,
+	    Ctor = void 0;
 
+	if (!obj || toString.call(obj) !== "[object Object]") {
+		return false;
+	}
+
+	proto = getProto(obj);
+
+	if (!proto) {
+		return true;
+	}
+
+	Ctor = hasOwn.call(proto, "constructor") && proto.constructor;
+	return typeof Ctor === "function" && fnToString.call(Ctor) === ObjectFunctionString;
+}
 
 function isFunction(obj) {
 	return typeof obj === "function" && typeof obj.nodeType !== "number";
@@ -106,12 +122,84 @@ function each(obj, callback) {
 	return obj;
 }
 
+function extend() {
+	var options = void 0,
+	    name = void 0,
+	    src = void 0,
+	    copy = void 0,
+	    copyIsArray = void 0,
+	    clone = void 0,
+	    target = arguments[0] || {},
+	    i = 1,
+	    length = arguments.length,
+	    deep = false;
+
+	// Handle a deep copy situation
+	if (typeof target === "boolean") {
+		deep = target;
+
+		// Skip the boolean and the target
+		target = arguments[i] || {};
+		i++;
+	}
+
+	// Handle case when target is a string or something (possible in deep copy)
+	if ((typeof target === "undefined" ? "undefined" : _typeof(target)) !== "object" && !isFunction(target)) {
+		target = {};
+	}
+
+	// Extend jQuery itself if only one argument is passed
+	if (i === length) {
+		target = this;
+		i--;
+	}
+
+	for (; i < length; i++) {
+
+		// Only deal with non-null/undefined values
+		if ((options = arguments[i]) != null) {
+
+			// Extend the base object
+			for (name in options) {
+				src = target[name];
+				copy = options[name];
+
+				// Prevent never-ending loop
+				if (target === copy) {
+					continue;
+				}
+
+				// Recurse if we're merging plain objects or arrays
+				if (deep && copy && (isPlainObject(copy) || (copyIsArray = Array.isArray(copy)))) {
+
+					if (copyIsArray) {
+						copyIsArray = false;
+						clone = src && Array.isArray(src) ? src : [];
+					} else {
+						clone = src && isPlainObject(src) ? src : {};
+					}
+
+					// Never move original objects, clone them
+					target[name] = extend(deep, clone, copy);
+
+					// Don't bring in undefined values
+				} else if (copy !== undefined) {
+					target[name] = copy;
+				}
+			}
+		}
+	}
+
+	// Return the modified object
+	return target;
+}
+
 var NODE_TYPE_ELEMENT = 1;
 var NODE_TYPE_ATTRIBUTE = 2;
 var NODE_TYPE_TEXT = 3;
 var NODE_TYPE_COMMENT = 8;
 var NODE_TYPE_DOCUMENT = 9;
-
+var NODE_TYPE_DOCUMENT_FRAGMENT = 11;
 
 function isObject(value) {
 	return value !== null && (typeof value === "undefined" ? "undefined" : _typeof(value)) === 'object';
@@ -666,6 +754,8 @@ var JQLitePrototype = JQLite.fn = JQLite.prototype = {
 	sort: [].sort,
 	splice: [].splice,
 
+	extend: extend,
+
 	find: function find$$1(selector) {
 		var i = void 0,
 		    ret = void 0,
@@ -763,7 +853,55 @@ function jqLiteProp(element, name, value) {
 	}
 }
 
+////////////Methods////////////////
 each({
+
+	append: function append(node) {
+		node = new JQLite(node);
+		return this.each(function (i, elem) {
+			var nodeType = elem.nodeType;
+			if (nodeType !== NODE_TYPE_ELEMENT && nodeType !== NODE_TYPE_DOCUMENT_FRAGMENT) return;
+
+			for (var _i = 0, ii = node.length; _i < ii; _i++) {
+				var child = node[_i];
+				elem.appendChild(child);
+			}
+		});
+	},
+
+	prepend: function prepend(node) {
+		node = new JQLite(node);
+		return this.each(function (i, elem) {
+			if (elem.nodeType === NODE_TYPE_ELEMENT) {
+				var index = elem.firstChild;
+				each(node, function (i, child) {
+					elem.insertBefore(child, index);
+				});
+			}
+		});
+	},
+
+	remove: function remove() {
+		return this.each(function (elem) {
+			var parent = elem.parentNode;
+			if (parent) parent.removeChild(elem);
+		});
+	},
+
+	children: function children() {
+		var children = [];
+
+		this.each(function (i, elem) {
+			each(elem.childNodes, function (ii, element) {
+				if (element.nodeType === NODE_TYPE_ELEMENT) {
+					children.push(element);
+				}
+			});
+		});
+
+		return children;
+	},
+
 	width: function width(value) {
 		var length = this.length;
 
@@ -978,6 +1116,54 @@ each({
      * Properties: writes return selection, reads return first value
      */
 	JQLitePrototype[name] = func;
+});
+
+each({ scrollLeft: "pageXOffset", scrollTop: "pageYOffset" }, function (method, prop) {
+	var top = "pageYOffset" === prop;
+
+	JQLitePrototype[method] = function (val) {
+		//getter
+		if (val === undefined) {
+			var win = void 0;
+			var elem = this[0];
+
+			if (!elem) return;
+
+			if (isWindow(elem)) {
+				win = elem;
+			} else if (elem.nodeType === NODE_TYPE_DOCUMENT) {
+				win = elem.defaultView;
+			}
+
+			return win ? win[prop] : elem[method];
+		}
+
+		//setter
+		return this.each(function (i, elem) {
+			var win = void 0;
+			if (isWindow(elem)) {
+				win = elem;
+			} else if (elem.nodeType === NODE_TYPE_DOCUMENT) {
+				win = elem.defaultView;
+			}
+
+			if (win) {
+				win.scrollTo(!top ? val : win.pageXOffset, top ? val : win.pageYOffset);
+			} else {
+				elem[method] = val;
+			}
+		});
+	};
+});
+
+////////////Functions////////////////
+each({
+	extend: extend,
+	each: each,
+	isWindow: isWindow,
+	css: css
+}, function (name, func) {
+	JQLite[name] = func;
 });
 
 return JQLite;

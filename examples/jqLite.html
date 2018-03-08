@@ -4,6 +4,10 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <title>jqLite</title>
 <script type="text/javascript" src="../dist/jqlite.js"></script>
+<script type="text/javascript">
+var $ = jqLite;
+</script>		
+<script type="text/javascript" src="./position.js"></script>
 </head>
 
 <body>
@@ -32,8 +36,6 @@
     </div>
     
 	<script type="text/javascript">
-		var $ = jqLite;
-	
 		$(function(){
 			console.log('ready...');
 			console.log( $('<div><h1>dadf</h1></div><div class="my"><h1>dadf</h1></div>') )
