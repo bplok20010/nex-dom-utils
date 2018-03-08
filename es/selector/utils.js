@@ -117,6 +117,10 @@ export const NODE_TYPE_COMMENT = 8;
 export const NODE_TYPE_DOCUMENT = 9;
 export const NODE_TYPE_DOCUMENT_FRAGMENT = 11;
 
+export function isObject(value) {
+	return value !== null && typeof value === 'object';
+}
+
 export function isUndefined(value) {
 	return typeof value === 'undefined';
 }
